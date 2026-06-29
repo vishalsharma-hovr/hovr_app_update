@@ -1,0 +1,125 @@
+package com.ridehovr.hovr_app_update
+
+import android.util.Log
+import androidx.fragment.app.FragmentActivity
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import io.flutter.plugin.common.MethodChannel.Result
+
+class HovrAppUpdatePlugin :
+    FlutterPlugin,
+    MethodCallHandler,
+    ActivityAware {
+    private lateinit var channel: MethodChannel
+    private var activity: FragmentActivity? = null
+
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        channel = MethodChannel(binding.binaryMessenger, AppUpdateChannelConstants.CHANNEL_NAME)
+        channel.setMethodCallHandler(this)
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        channel.setMethodCallHandler(null)
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        activity = binding.activity as? FragmentActivity
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        activity = null
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        activity = binding.activity as? FragmentActivity
+    }
+
+    override fun onDetachedFromActivity() {
+        activity = null
+    }
+
+    override fun onMethodCall(call: MethodCall, result: Result) {
+        when (call.method) {
+            AppUpdateChannelConstants.METHOD_CONFIGURE -> handleConfigure(result)
+            AppUpdateChannelConstants.METHOD_PROMPT -> handlePrompt(call, result)
+            else -> result.notImplemented()
+        }
+    }
+
+    private fun handleConfigure(result: Result) {
+        result.success(null)
+    }
+
+    private fun handlePrompt(call: MethodCall, result: Result) {
+        val serverVersion = readServerVersion(call)
+        if (serverVersion == null) {
+            result.error("INVALID_ARGS", "serverVersion is required", null)
+            return
+        }
+
+        val hostActivity = activity
+        if (hostActivity == null || hostActivity.isFinishing) {
+            result.error("NO_ACTIVITY", "Host activity is not available", null)
+            return
+        }
+
+        val installedVersion = readInstalledVersion(hostActivity)
+        val updateRequired = VersionCompare.isUpdateRequired(serverVersion, installedVersion)
+        if (!updateRequired) {
+            result.success(promptResult(updateRequired = false, dialogShown = false))
+            return
+        }
+
+        hostActivity.runOnUiThread {
+            val dialogShown = presentUpdateDialogIfNeeded(hostActivity)
+            result.success(promptResult(updateRequired = true, dialogShown = dialogShown))
+        }
+    }
+
+    private fun readServerVersion(call: MethodCall): String? {
+        val args = call.arguments as? Map<*, *> ?: return null
+        val value = args["serverVersion"] as? String ?: return null
+        return value
+    }
+
+    private fun readInstalledVersion(hostActivity: FragmentActivity): String {
+        val packageInfo = hostActivity.packageManager.getPackageInfo(hostActivity.packageName, 0)
+        return packageInfo.versionName ?: ""
+    }
+
+    private fun presentUpdateDialogIfNeeded(hostActivity: FragmentActivity): Boolean {
+        if (updateDialogShownThisSession) {
+            return false
+        }
+
+        val fragmentManager = hostActivity.supportFragmentManager
+        if (fragmentManager.findFragmentByTag(AppUpdateChannelConstants.DIALOG_TAG) != null) {
+            return false
+        }
+
+        if (hostActivity.isFinishing) {
+            return false
+        }
+
+        updateDialogShownThisSession = true
+        UpdateDialogFragment().show(fragmentManager, AppUpdateChannelConstants.DIALOG_TAG)
+        Log.d(TAG, "Update dialog presented")
+        return true
+    }
+
+    private fun promptResult(updateRequired: Boolean, dialogShown: Boolean): Map<String, Boolean> {
+        return mapOf(
+            "updateRequired" to updateRequired,
+            "dialogShown" to dialogShown,
+        )
+    }
+
+    companion object {
+        private const val TAG = "HovrAppUpdate"
+        private var updateDialogShownThisSession = false
+    }
+}
