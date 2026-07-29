@@ -9,12 +9,22 @@ await HovrAppUpdate.configure(
   const AppUpdateConfig(iosAppStoreId: '1585783552'),
 );
 
+// Full package info (replaces package_info_plus)
+final info = await HovrAppUpdate.getAppInfo();
+print(info.appName);      // "HOVR Rider"
+print(info.packageName);  // "com.ridehovr.rider"
+print(info.version);      // "6.2.4"
+print(info.buildNumber);  // "579"
+
+// Or just the marketing version
+final version = await HovrAppUpdate.getInstalledVersion();
+
 await HovrAppUpdate.promptIfUpdateRequired(
   serverVersion: remoteVersion,
 );
 ```
 
-Call `configure` once during app startup. Call `promptIfUpdateRequired` after fetching the server version from your IAM/API layer.
+Call `configure` once during app startup. Use `getAppInfo` for full package information (app name, package name, version, build number) — this replaces the need for `package_info_plus`. Use `getInstalledVersion` when you only need the marketing version string. Call `promptIfUpdateRequired` after fetching the server version from your IAM/API layer.
 
 ## Session behavior
 

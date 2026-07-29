@@ -5,6 +5,8 @@ enum AppUpdateChannelConstants {
   static let channelName = "hovr_app_update"
   static let methodConfigure = "configure"
   static let methodPrompt = "promptIfUpdateRequired"
+  static let methodGetInstalledVersion = "getInstalledVersion"
+  static let methodGetAppInfo = "getAppInfo"
 }
 
 public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
@@ -26,9 +28,37 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
       handleConfigure(call: call, result: result)
     case AppUpdateChannelConstants.methodPrompt:
       handlePrompt(call: call, result: result)
+    case AppUpdateChannelConstants.methodGetInstalledVersion:
+      handleGetInstalledVersion(result: result)
+    case AppUpdateChannelConstants.methodGetAppInfo:
+      handleGetAppInfo(result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  private func handleGetInstalledVersion(result: @escaping FlutterResult) {
+    guard let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else {
+      result(FlutterError(code: "INVALID_ARGS", message: "Installed version missing", details: nil))
+      return
+    }
+    result(currentVersion)
+  }
+
+  private func handleGetAppInfo(result: @escaping FlutterResult) {
+    let info = Bundle.main.infoDictionary ?? [:]
+    let appName = (info["CFBundleDisplayName"] as? String)
+        ?? (info["CFBundleName"] as? String)
+        ?? ""
+    let packageName = Bundle.main.bundleIdentifier ?? ""
+    let version = (info["CFBundleShortVersionString"] as? String) ?? ""
+    let buildNumber = (info["CFBundleVersion"] as? String) ?? ""
+    result([
+      "appName": appName,
+      "packageName": packageName,
+      "version": version,
+      "buildNumber": buildNumber,
+    ])
   }
 
   private func handleConfigure(call: FlutterMethodCall, result: @escaping FlutterResult) {

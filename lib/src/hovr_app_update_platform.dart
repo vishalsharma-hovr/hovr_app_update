@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'app_info.dart';
 import 'app_update_result.dart';
 
 const _channelName = 'hovr_app_update';
@@ -20,6 +21,27 @@ class HovrAppUpdatePlatform {
     await _channel.invokeMethod<void>('configure', <String, String>{
       'iosAppStoreId': iosAppStoreId,
     });
+  }
+
+  /// Returns the installed app version name for the current platform
+  /// (Android `versionName` / iOS `CFBundleShortVersionString`).
+  Future<String> getInstalledVersion() async {
+    final version = await _channel.invokeMethod<String>('getInstalledVersion');
+    return version?.trim() ?? '';
+  }
+
+  /// Returns full package information from the native platform.
+  Future<AppInfo> getAppInfo() async {
+    final result = await _channel.invokeMethod<Object?>('getAppInfo');
+    if (result is Map<Object?, Object?>) {
+      return AppInfo.fromMap(result);
+    }
+    return const AppInfo(
+      appName: '',
+      packageName: '',
+      version: '',
+      buildNumber: '',
+    );
   }
 
   Future<AppUpdateResult?> promptIfUpdateRequired({

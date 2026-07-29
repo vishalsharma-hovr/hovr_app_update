@@ -1,5 +1,6 @@
 package com.ridehovr.hovr_app_update
 
+import android.content.Context
 import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -15,15 +16,18 @@ class HovrAppUpdatePlugin :
     MethodCallHandler,
     ActivityAware {
     private lateinit var channel: MethodChannel
+    private var applicationContext: Context? = null
     private var activity: FragmentActivity? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        applicationContext = binding.applicationContext
         channel = MethodChannel(binding.binaryMessenger, AppUpdateChannelConstants.CHANNEL_NAME)
         channel.setMethodCallHandler(this)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        applicationContext = null
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -46,12 +50,46 @@ class HovrAppUpdatePlugin :
         when (call.method) {
             AppUpdateChannelConstants.METHOD_CONFIGURE -> handleConfigure(result)
             AppUpdateChannelConstants.METHOD_PROMPT -> handlePrompt(call, result)
+            AppUpdateChannelConstants.METHOD_GET_INSTALLED_VERSION -> handleGetInstalledVersion(result)
+            AppUpdateChannelConstants.METHOD_GET_APP_INFO -> handleGetAppInfo(result)
             else -> result.notImplemented()
         }
     }
 
     private fun handleConfigure(result: Result) {
         result.success(null)
+    }
+
+    private fun handleGetInstalledVersion(result: Result) {
+        val context = applicationContext
+        if (context == null) {
+            result.error("NO_CONTEXT", "Application context is not available", null)
+            return
+        }
+        result.success(readInstalledVersion(context))
+    }
+
+    private fun handleGetAppInfo(result: Result) {
+        val context = applicationContext
+        if (context == null) {
+            result.error("NO_CONTEXT", "Application context is not available", null)
+            return
+        }
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        val appInfo = context.applicationInfo
+        val appName = appInfo?.let {
+            context.packageManager.getApplicationLabel(it).toString()
+        } ?: ""
+        @Suppress("DEPRECATION")
+        val versionCode = packageInfo.versionCode
+        result.success(
+            mapOf(
+                "appName" to appName,
+                "packageName" to context.packageName,
+                "version" to (packageInfo.versionName ?: ""),
+                "buildNumber" to versionCode.toString(),
+            )
+        )
     }
 
     private fun handlePrompt(call: MethodCall, result: Result) {
@@ -86,8 +124,8 @@ class HovrAppUpdatePlugin :
         return value
     }
 
-    private fun readInstalledVersion(hostActivity: FragmentActivity): String {
-        val packageInfo = hostActivity.packageManager.getPackageInfo(hostActivity.packageName, 0)
+    private fun readInstalledVersion(context: Context): String {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         return packageInfo.versionName ?: ""
     }
 
