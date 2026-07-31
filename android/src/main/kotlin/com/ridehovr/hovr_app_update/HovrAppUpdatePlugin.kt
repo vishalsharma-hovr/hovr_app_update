@@ -153,7 +153,11 @@ class HovrAppUpdatePlugin :
         hostActivity: FragmentActivity,
         mode: String,
     ): Boolean {
-        if (updateDialogShownThisSession) {
+        val alreadyShown = when (mode) {
+            AppUpdateChannelConstants.DIALOG_MODE_RESTART -> otaDialogShownThisSession
+            else -> storeDialogShownThisSession
+        }
+        if (alreadyShown) {
             return false
         }
 
@@ -166,7 +170,10 @@ class HovrAppUpdatePlugin :
             return false
         }
 
-        updateDialogShownThisSession = true
+        when (mode) {
+            AppUpdateChannelConstants.DIALOG_MODE_RESTART -> otaDialogShownThisSession = true
+            else -> storeDialogShownThisSession = true
+        }
         UpdateDialogFragment.newInstance(mode)
             .show(fragmentManager, AppUpdateChannelConstants.DIALOG_TAG)
         Log.d(TAG, "Update dialog presented mode=$mode")
@@ -182,6 +189,7 @@ class HovrAppUpdatePlugin :
 
     companion object {
         private const val TAG = "HovrAppUpdate"
-        private var updateDialogShownThisSession = false
+        private var storeDialogShownThisSession = false
+        private var otaDialogShownThisSession = false
     }
 }

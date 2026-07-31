@@ -28,6 +28,7 @@ class HovrAppUpdate {
     if (isSafe != null) {
       _ota.configure(
         isSafeToPromptRestart: isSafe,
+        promptRestart: config.promptOtaRestart,
         onError: config.onOtaError,
         track: config.otaTrack,
         updater: otaUpdater,
@@ -55,8 +56,10 @@ class HovrAppUpdate {
     await _platform.promptIfUpdateRequired(serverVersion: serverVersion);
   }
 
-  /// Shorebird OTA: check/download patch; show the same native dialog when ready.
-  /// Primary action restarts the process so the patch can load.
+  /// Shorebird OTA: check/download patch; prompt restart when ready.
+  ///
+  /// Uses [AppUpdateConfig.promptOtaRestart] when set; otherwise the native
+  /// Update Required dialog (Update restarts the process).
   ///
   /// No-op unless [AppUpdateConfig.isSafeToPromptOtaRestart] was set in [configure].
   /// Safe no-op on non-Shorebird / debug builds.

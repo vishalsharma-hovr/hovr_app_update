@@ -1,3 +1,9 @@
+## 0.2.1
+
+- Separate once-per-session guards for store vs OTA prompts (store no longer blocks OTA).
+- Optional `AppUpdateConfig.promptOtaRestart` host callback (Flutter dialog) instead of native-only OTA UI.
+- iOS: walk presented VC chain / foreground window when showing native dialogs.
+
 ## 0.2.0
 
 - Combine Shorebird OTA into this package (replaces standalone `hovr_shorebird`).

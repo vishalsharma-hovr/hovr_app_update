@@ -3,7 +3,7 @@ import 'ota_update_status.dart';
 import 'ota_updater.dart';
 import 'shorebird_code_push_updater.dart';
 
-/// Shorebird OTA check/download + shared native restart dialog.
+/// Shorebird OTA check/download + restart prompt (native or host-injected).
 class OtaController {
   OtaController({
     required HovrAppUpdatePlatform platform,
@@ -14,6 +14,7 @@ class OtaController {
   final HovrAppUpdatePlatform _platform;
   OtaUpdater? _updater;
   bool Function()? isSafeToPromptRestart;
+  Future<bool> Function()? promptRestart;
   void Function(Object error, StackTrace stackTrace)? onError;
   String? track;
   var _inFlight = false;
@@ -22,11 +23,13 @@ class OtaController {
 
   void configure({
     required bool Function() isSafeToPromptRestart,
+    Future<bool> Function()? promptRestart,
     void Function(Object error, StackTrace stackTrace)? onError,
     String? track,
     OtaUpdater? updater,
   }) {
     this.isSafeToPromptRestart = isSafeToPromptRestart;
+    this.promptRestart = promptRestart;
     this.onError = onError;
     this.track = track;
     if (updater != null) {
@@ -80,6 +83,7 @@ class OtaController {
 
   void resetForTests() {
     isSafeToPromptRestart = null;
+    promptRestart = null;
     onError = null;
     track = null;
     _updater = null;
@@ -100,7 +104,12 @@ class OtaController {
     if (status != OtaUpdateStatus.restartRequired) return;
     if (!isSafe()) return;
 
-    // Same native dialog as store updates; Update restarts the process.
+    final hostPrompt = promptRestart;
+    if (hostPrompt != null) {
+      await hostPrompt();
+      return;
+    }
+
     await _platform.promptRestartToApplyUpdate();
   }
 

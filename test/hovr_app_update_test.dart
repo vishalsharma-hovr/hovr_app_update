@@ -85,13 +85,14 @@ void main() {
       expect(calls[1].method, 'promptRestartToApplyUpdate');
     });
 
-    test('store dialog blocks later OTA restart prompt', () async {
+    test('store dialog does not block later OTA restart prompt', () async {
       final platform = HovrAppUpdatePlatform();
       await platform.promptIfUpdateRequired(serverVersion: '9.0.0');
       await platform.promptRestartToApplyUpdate();
 
-      expect(calls, hasLength(1));
-      expect(calls.single.method, 'promptIfUpdateRequired');
+      expect(calls, hasLength(2));
+      expect(calls[0].method, 'promptIfUpdateRequired');
+      expect(calls[1].method, 'promptRestartToApplyUpdate');
     });
 
     test('does not mark session handled when platform throws', () async {

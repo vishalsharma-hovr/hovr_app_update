@@ -8,9 +8,10 @@ import 'app_update_result.dart';
 
 const _channelName = 'hovr_app_update';
 
-bool _handledThisSession = false;
+bool _storeHandledThisSession = false;
+bool _otaHandledThisSession = false;
 
-/// Platform channel wrapper with a Dart-side once-per-session guard.
+/// Platform channel wrapper with separate store / OTA once-per-session guards.
 class HovrAppUpdatePlatform {
   HovrAppUpdatePlatform({MethodChannel? channel})
       : _channel = channel ?? const MethodChannel(_channelName);
@@ -47,7 +48,7 @@ class HovrAppUpdatePlatform {
   Future<AppUpdateResult?> promptIfUpdateRequired({
     required String serverVersion,
   }) async {
-    if (_handledThisSession) {
+    if (_storeHandledThisSession) {
       return null;
     }
 
@@ -56,7 +57,7 @@ class HovrAppUpdatePlatform {
         'promptIfUpdateRequired',
         <String, String>{'serverVersion': serverVersion},
       );
-      return _parseAndMarkSession(response);
+      return _parseAndMarkStore(response);
     } on PlatformException catch (error, stackTrace) {
       developer.log(
         'HovrAppUpdate prompt failed',
@@ -70,7 +71,7 @@ class HovrAppUpdatePlatform {
 
   /// Shows the same native update dialog; primary action restarts the process.
   Future<AppUpdateResult?> promptRestartToApplyUpdate() async {
-    if (_handledThisSession) {
+    if (_otaHandledThisSession) {
       return null;
     }
 
@@ -78,7 +79,7 @@ class HovrAppUpdatePlatform {
       final response = await _channel.invokeMethod<Object?>(
         'promptRestartToApplyUpdate',
       );
-      return _parseAndMarkSession(response);
+      return _parseAndMarkOta(response);
     } on PlatformException catch (error, stackTrace) {
       developer.log(
         'HovrAppUpdate OTA restart prompt failed',
@@ -90,11 +91,22 @@ class HovrAppUpdatePlatform {
     }
   }
 
-  AppUpdateResult _parseAndMarkSession(Object? response) {
+  AppUpdateResult _parseAndMarkStore(Object? response) {
     if (response is Map<Object?, Object?>) {
       final result = AppUpdateResult.fromMap(response);
       if (result.dialogShown) {
-        _handledThisSession = true;
+        _storeHandledThisSession = true;
+      }
+      return result;
+    }
+    return const AppUpdateResult(updateRequired: false, dialogShown: false);
+  }
+
+  AppUpdateResult _parseAndMarkOta(Object? response) {
+    if (response is Map<Object?, Object?>) {
+      final result = AppUpdateResult.fromMap(response);
+      if (result.dialogShown) {
+        _otaHandledThisSession = true;
       }
       return result;
     }
@@ -103,6 +115,7 @@ class HovrAppUpdatePlatform {
 
   @visibleForTesting
   static void resetSessionForTests() {
-    _handledThisSession = false;
+    _storeHandledThisSession = false;
+    _otaHandledThisSession = false;
   }
 }

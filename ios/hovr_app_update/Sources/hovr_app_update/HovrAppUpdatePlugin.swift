@@ -16,7 +16,8 @@ enum UpdateDialogMode {
 }
 
 public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
-  private static var updateDialogShownThisSession = false
+  private static var storeDialogShownThisSession = false
+  private static var otaDialogShownThisSession = false
   private static var iosAppStoreId: String?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -73,7 +74,7 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
     guard let args = call.arguments as? [String: Any],
           let storeId = args["iosAppStoreId"] as? String,
           !storeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      result(FlutterError(code: "CONFIGURE_REQUIRED", message: "iosAppStoreId is required", details: nil))
+      result(FlutterError(code: "INVALID_ARGS", message: "iosAppStoreId is required", details: nil))
       return
     }
     Self.iosAppStoreId = storeId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -128,15 +129,20 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
   }
 
   private func presentUpdateDialogIfNeeded(mode: UpdateDialogMode, appStoreId: String?) -> Bool {
-    if Self.updateDialogShownThisSession {
-      return false
+    switch mode {
+    case .store:
+      if Self.storeDialogShownThisSession { return false }
+    case .restart:
+      if Self.otaDialogShownThisSession { return false }
     }
 
     guard let topVC = Self.topViewController() else {
       return false
     }
 
-    Self.updateDialogShownThisSession = true
+    if topVC.presentedViewController != nil {
+      return false
+    }
 
     let alert = UIAlertController(
       title: "Update Required",
@@ -158,6 +164,13 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
 
     alert.addAction(UIAlertAction(title: "Skip", style: .cancel, handler: nil))
     topVC.present(alert, animated: true, completion: nil)
+
+    switch mode {
+    case .store:
+      Self.storeDialogShownThisSession = true
+    case .restart:
+      Self.otaDialogShownThisSession = true
+    }
     return true
   }
 
@@ -169,10 +182,23 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
   }
 
   private static func topViewController() -> UIViewController? {
-    UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let windows = scenes
+      .sorted { lhs, rhs in
+        let leftActive = lhs.activationState == .foregroundActive
+        let rightActive = rhs.activationState == .foregroundActive
+        if leftActive != rightActive { return leftActive }
+        return false
+      }
       .flatMap { $0.windows }
-      .first(where: { $0.isKeyWindow })?
-      .rootViewController
+
+    let keyWindow = windows.first(where: \.isKeyWindow) ?? windows.first
+    guard var top = keyWindow?.rootViewController else {
+      return nil
+    }
+    while let presented = top.presentedViewController {
+      top = presented
+    }
+    return top
   }
 }
