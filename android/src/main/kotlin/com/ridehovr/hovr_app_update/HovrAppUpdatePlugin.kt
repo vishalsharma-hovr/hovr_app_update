@@ -50,6 +50,7 @@ class HovrAppUpdatePlugin :
         when (call.method) {
             AppUpdateChannelConstants.METHOD_CONFIGURE -> handleConfigure(result)
             AppUpdateChannelConstants.METHOD_PROMPT -> handlePrompt(call, result)
+            AppUpdateChannelConstants.METHOD_PROMPT_RESTART -> handlePromptRestart(result)
             AppUpdateChannelConstants.METHOD_GET_INSTALLED_VERSION -> handleGetInstalledVersion(result)
             AppUpdateChannelConstants.METHOD_GET_APP_INFO -> handleGetAppInfo(result)
             else -> result.notImplemented()
@@ -113,7 +114,26 @@ class HovrAppUpdatePlugin :
         }
 
         hostActivity.runOnUiThread {
-            val dialogShown = presentUpdateDialogIfNeeded(hostActivity)
+            val dialogShown = presentUpdateDialogIfNeeded(
+                hostActivity,
+                AppUpdateChannelConstants.DIALOG_MODE_STORE,
+            )
+            result.success(promptResult(updateRequired = true, dialogShown = dialogShown))
+        }
+    }
+
+    private fun handlePromptRestart(result: Result) {
+        val hostActivity = activity
+        if (hostActivity == null || hostActivity.isFinishing) {
+            result.error("NO_ACTIVITY", "Host activity is not available", null)
+            return
+        }
+
+        hostActivity.runOnUiThread {
+            val dialogShown = presentUpdateDialogIfNeeded(
+                hostActivity,
+                AppUpdateChannelConstants.DIALOG_MODE_RESTART,
+            )
             result.success(promptResult(updateRequired = true, dialogShown = dialogShown))
         }
     }
@@ -129,7 +149,10 @@ class HovrAppUpdatePlugin :
         return packageInfo.versionName ?: ""
     }
 
-    private fun presentUpdateDialogIfNeeded(hostActivity: FragmentActivity): Boolean {
+    private fun presentUpdateDialogIfNeeded(
+        hostActivity: FragmentActivity,
+        mode: String,
+    ): Boolean {
         if (updateDialogShownThisSession) {
             return false
         }
@@ -144,8 +167,9 @@ class HovrAppUpdatePlugin :
         }
 
         updateDialogShownThisSession = true
-        UpdateDialogFragment().show(fragmentManager, AppUpdateChannelConstants.DIALOG_TAG)
-        Log.d(TAG, "Update dialog presented")
+        UpdateDialogFragment.newInstance(mode)
+            .show(fragmentManager, AppUpdateChannelConstants.DIALOG_TAG)
+        Log.d(TAG, "Update dialog presented mode=$mode")
         return true
     }
 

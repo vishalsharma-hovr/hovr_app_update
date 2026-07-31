@@ -56,11 +56,7 @@ class HovrAppUpdatePlatform {
         'promptIfUpdateRequired',
         <String, String>{'serverVersion': serverVersion},
       );
-      _handledThisSession = true;
-      if (response is Map<Object?, Object?>) {
-        return AppUpdateResult.fromMap(response);
-      }
-      return const AppUpdateResult(updateRequired: false, dialogShown: false);
+      return _parseAndMarkSession(response);
     } on PlatformException catch (error, stackTrace) {
       developer.log(
         'HovrAppUpdate prompt failed',
@@ -70,6 +66,39 @@ class HovrAppUpdatePlatform {
       );
       return null;
     }
+  }
+
+  /// Shows the same native update dialog; primary action restarts the process.
+  Future<AppUpdateResult?> promptRestartToApplyUpdate() async {
+    if (_handledThisSession) {
+      return null;
+    }
+
+    try {
+      final response = await _channel.invokeMethod<Object?>(
+        'promptRestartToApplyUpdate',
+      );
+      return _parseAndMarkSession(response);
+    } on PlatformException catch (error, stackTrace) {
+      developer.log(
+        'HovrAppUpdate OTA restart prompt failed',
+        name: 'hovr_app_update',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  AppUpdateResult _parseAndMarkSession(Object? response) {
+    if (response is Map<Object?, Object?>) {
+      final result = AppUpdateResult.fromMap(response);
+      if (result.dialogShown) {
+        _handledThisSession = true;
+      }
+      return result;
+    }
+    return const AppUpdateResult(updateRequired: false, dialogShown: false);
   }
 
   @visibleForTesting

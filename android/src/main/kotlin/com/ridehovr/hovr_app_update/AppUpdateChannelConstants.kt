@@ -5,6 +5,10 @@ internal object AppUpdateChannelConstants {
     const val DIALOG_TAG = "hovr_app_update_dialog"
     const val METHOD_CONFIGURE = "configure"
     const val METHOD_PROMPT = "promptIfUpdateRequired"
+    const val METHOD_PROMPT_RESTART = "promptRestartToApplyUpdate"
     const val METHOD_GET_INSTALLED_VERSION = "getInstalledVersion"
     const val METHOD_GET_APP_INFO = "getAppInfo"
+
+    const val DIALOG_MODE_STORE = "store"
+    const val DIALOG_MODE_RESTART = "restart"
 }

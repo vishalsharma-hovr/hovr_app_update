@@ -5,8 +5,14 @@ enum AppUpdateChannelConstants {
   static let channelName = "hovr_app_update"
   static let methodConfigure = "configure"
   static let methodPrompt = "promptIfUpdateRequired"
+  static let methodPromptRestart = "promptRestartToApplyUpdate"
   static let methodGetInstalledVersion = "getInstalledVersion"
   static let methodGetAppInfo = "getAppInfo"
+}
+
+enum UpdateDialogMode {
+  case store
+  case restart
 }
 
 public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
@@ -28,6 +34,8 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
       handleConfigure(call: call, result: result)
     case AppUpdateChannelConstants.methodPrompt:
       handlePrompt(call: call, result: result)
+    case AppUpdateChannelConstants.methodPromptRestart:
+      handlePromptRestart(result: result)
     case AppUpdateChannelConstants.methodGetInstalledVersion:
       handleGetInstalledVersion(result: result)
     case AppUpdateChannelConstants.methodGetAppInfo:
@@ -65,7 +73,7 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
     guard let args = call.arguments as? [String: Any],
           let storeId = args["iosAppStoreId"] as? String,
           !storeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      result(FlutterError(code: "INVALID_ARGS", message: "iosAppStoreId is required", details: nil))
+      result(FlutterError(code: "CONFIGURE_REQUIRED", message: "iosAppStoreId is required", details: nil))
       return
     }
     Self.iosAppStoreId = storeId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -103,12 +111,23 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
         result(FlutterError(code: "NO_ACTIVITY", message: "No view controller available", details: nil))
         return
       }
-      let dialogShown = self.presentUpdateDialogIfNeeded(appStoreId: storeId)
+      let dialogShown = self.presentUpdateDialogIfNeeded(mode: .store, appStoreId: storeId)
       result(self.promptResult(updateRequired: true, dialogShown: dialogShown))
     }
   }
 
-  private func presentUpdateDialogIfNeeded(appStoreId: String) -> Bool {
+  private func handlePromptRestart(result: @escaping FlutterResult) {
+    DispatchQueue.main.async {
+      guard Self.topViewController() != nil else {
+        result(FlutterError(code: "NO_ACTIVITY", message: "No view controller available", details: nil))
+        return
+      }
+      let dialogShown = self.presentUpdateDialogIfNeeded(mode: .restart, appStoreId: nil)
+      result(self.promptResult(updateRequired: true, dialogShown: dialogShown))
+    }
+  }
+
+  private func presentUpdateDialogIfNeeded(mode: UpdateDialogMode, appStoreId: String?) -> Bool {
     if Self.updateDialogShownThisSession {
       return false
     }
@@ -126,8 +145,14 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
     )
 
     alert.addAction(UIAlertAction(title: "Update", style: .default, handler: { _ in
-      if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreId)") {
-        UIApplication.shared.open(url)
+      switch mode {
+      case .store:
+        if let appStoreId,
+           let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreId)") {
+          UIApplication.shared.open(url)
+        }
+      case .restart:
+        exit(0)
       }
     }))
 

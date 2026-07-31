@@ -1,66 +1,53 @@
 # hovr_app_update
 
-Native update-required dialog for HOVR Flutter apps with a once-per-process session policy.
+Native **Update Required** dialog for HOVR Flutter apps — store force-update **and** Shorebird OTA restart — with a once-per-process session policy.
 
 ## API
 
 ```dart
 await HovrAppUpdate.configure(
-  const AppUpdateConfig(iosAppStoreId: '1585783552'),
+  AppUpdateConfig(
+    iosAppStoreId: '1585783552',
+    // Optional: enables Shorebird OTA (same popup; Update restarts the app)
+    isSafeToPromptOtaRestart: () => !hasActiveTrip,
+    onOtaError: (error, stack) { /* log */ },
+  ),
 );
 
 // Full package info (replaces package_info_plus)
 final info = await HovrAppUpdate.getAppInfo();
-print(info.appName);      // "HOVR Rider"
-print(info.packageName);  // "com.ridehovr.rider"
-print(info.version);      // "6.2.4"
-print(info.buildNumber);  // "579"
 
-// Or just the marketing version
-final version = await HovrAppUpdate.getInstalledVersion();
+// Store force-update (opens Play / App Store on Update)
+await HovrAppUpdate.promptIfUpdateRequired(serverVersion: remoteVersion);
 
-await HovrAppUpdate.promptIfUpdateRequired(
-  serverVersion: remoteVersion,
-);
+// Shorebird OTA (check/download; same dialog; Update restarts process)
+await HovrAppUpdate.checkForOtaAndPromptIfReady();
 ```
 
-Call `configure` once during app startup. Use `getAppInfo` for full package information (app name, package name, version, build number) — this replaces the need for `package_info_plus`. Use `getInstalledVersion` when you only need the marketing version string. Call `promptIfUpdateRequired` after fetching the server version from your IAM/API layer.
+Hosts must set `auto_update: false` in their own `shorebird.yaml`. OTA is a no-op on non-Shorebird / debug builds.
 
 ## Session behavior
 
-- Dialog shows at most **once per app process**.
-- Skipping or updating dismisses the dialog; it does not reappear until the app is force-quit and reopened.
-- Background/resume does not reset the session guard.
+- Dialog shows at most **once per app process** (store **or** OTA).
+- Skipping dismisses the dialog; it does not reappear until the app is force-quit and reopened.
+- A store check that does **not** show a dialog does not block a later OTA prompt.
 
-## Local development (rider app)
+## Local development
 
 ```yaml
-dependency_overrides:
-  hovr_app_update:
-    path: packages/hovr_app_update
+hovr_app_update:
+  path: ../../Documents/hovr-packages/hovr_app_update
 ```
 
 ## Validation
 
 ```bash
-cd packages/hovr_app_update
+cd ~/Documents/hovr-packages/hovr_app_update
 dart analyze --fatal-warnings lib test
 flutter test
 cd android && ./gradlew testDebugUnitTest
 ```
 
-## Manual QA sign-off (before GitHub publish)
-
-| # | Scenario | Expected |
-|---|----------|----------|
-| 1 | Cold start, outdated version | Dialog once |
-| 2 | Tap Skip, navigate tabs | No dialog |
-| 3 | Kill app from recents, reopen | Dialog once again |
-| 4 | Background 5 min, resume | No dialog |
-| 5 | Home remount / hot restart | No duplicate dialog same session |
-| 6 | Current version matches server | No dialog |
-| 7 | Channel failure (no activity) | No crash; may retry on next bootstrap |
-
 ## Publishing
 
-Keep the package local until QA sign-off. Publish to GitHub and switch consumer apps from `path` override to a pinned `git` ref.
+Bump `version`, tag (e.g. `v0.2.0`), publish to GitHub, pin consumer apps to the new git `ref`.

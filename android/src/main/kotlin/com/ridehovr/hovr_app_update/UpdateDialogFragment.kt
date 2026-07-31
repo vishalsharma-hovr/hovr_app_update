@@ -4,12 +4,12 @@ import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Process
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.net.toUri
 import androidx.fragment.app.DialogFragment
+import kotlin.system.exitProcess
 
 private fun openPlayStore(context: Context) {
     val packageName = context.packageName
@@ -52,6 +53,11 @@ private fun openPlayStore(context: Context) {
             },
         )
     }
+}
+
+private fun restartProcess() {
+    Process.killProcess(Process.myPid())
+    exitProcess(0)
 }
 
 @Composable
@@ -105,6 +111,7 @@ private fun UpdateDialogContent(
 
 internal class UpdateDialogFragment : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val mode = arguments?.getString(ARG_MODE) ?: AppUpdateChannelConstants.DIALOG_MODE_STORE
         val composeView = ComposeView(requireContext()).apply {
             setContent {
                 MaterialTheme {
@@ -116,7 +123,11 @@ internal class UpdateDialogFragment : DialogFragment() {
                             onSkipClick = { dismiss() },
                             onUpdateClick = {
                                 dismiss()
-                                openPlayStore(requireContext())
+                                if (mode == AppUpdateChannelConstants.DIALOG_MODE_RESTART) {
+                                    restartProcess()
+                                } else {
+                                    openPlayStore(requireContext())
+                                }
                             },
                         )
                     }
@@ -129,6 +140,18 @@ internal class UpdateDialogFragment : DialogFragment() {
             setCancelable(false)
             setCanceledOnTouchOutside(false)
             window?.setBackgroundDrawable(android.graphics.Color.TRANSPARENT.toDrawable())
+        }
+    }
+
+    companion object {
+        private const val ARG_MODE = "mode"
+
+        fun newInstance(mode: String): UpdateDialogFragment {
+            return UpdateDialogFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_MODE, mode)
+                }
+            }
         }
     }
 }
