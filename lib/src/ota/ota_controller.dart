@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import '../hovr_app_update_platform.dart';
 import 'ota_update_status.dart';
 import 'ota_updater.dart';
@@ -94,19 +96,39 @@ class OtaController {
     bool Function() isSafe,
     OtaUpdater updater,
   ) async {
+    final bootedPatch = await updater.readCurrentPatchNumber();
     var status = await updater.checkForUpdate(track: track);
+    developer.log(
+      'OTA check available=${updater.isAvailable} '
+      'bootedPatch=$bootedPatch status=$status track=${track ?? 'stable'}',
+      name: 'hovr_app_update',
+    );
 
     if (status == OtaUpdateStatus.outdated) {
       await updater.downloadUpdate(track: track);
       status = OtaUpdateStatus.restartRequired;
+      developer.log(
+        'OTA patch downloaded; restart required to apply',
+        name: 'hovr_app_update',
+      );
     }
 
     if (status != OtaUpdateStatus.restartRequired) return;
-    if (!isSafe()) return;
+    if (!isSafe()) {
+      developer.log(
+        'OTA restart deferred (host reported not safe)',
+        name: 'hovr_app_update',
+      );
+      return;
+    }
 
     final hostPrompt = promptRestart;
     if (hostPrompt != null) {
-      await hostPrompt();
+      final accepted = await hostPrompt();
+      developer.log(
+        'OTA restart prompt accepted=$accepted',
+        name: 'hovr_app_update',
+      );
       return;
     }
 
