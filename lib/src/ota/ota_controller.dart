@@ -50,11 +50,22 @@ class OtaController {
     }
   }
 
+  /// Whether the running binary was produced by `shorebird release`.
+  /// False for `flutter build` / debug binaries — OTA can never apply there.
+  bool get isOtaAvailable => _resolvedUpdater.isAvailable;
+
   Future<void> checkForUpdateAndPromptIfReady() async {
     final isSafe = isSafeToPromptRestart;
     if (isSafe == null || _inFlight) return;
     final updater = _resolvedUpdater;
-    if (!updater.isAvailable) return;
+    if (!updater.isAvailable) {
+      developer.log(
+        'OTA skipped: updater unavailable — this build was not produced by '
+        '`shorebird release`, so patches can never apply',
+        name: 'hovr_app_update',
+      );
+      return;
+    }
 
     _inFlight = true;
     try {

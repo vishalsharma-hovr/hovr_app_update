@@ -1,3 +1,10 @@
+## 0.2.2
+
+- Add `HovrAppUpdate.isOtaAvailable` so hosts can tell a Shorebird release build
+  from a plain `flutter build` (where patches can never apply).
+- Log OTA diagnostics: updater availability, booted patch, check status, track,
+  download completion, deferred restart, and prompt result.
+
 ## 0.2.1
 
 - Separate once-per-session guards for store vs OTA prompts (store no longer blocks OTA).

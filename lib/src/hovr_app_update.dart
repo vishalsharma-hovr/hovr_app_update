@@ -77,6 +77,12 @@ class HovrAppUpdate {
     return _ota.currentPatchNumber();
   }
 
+  /// Whether the running binary can receive Shorebird patches at all.
+  ///
+  /// False for `flutter build` / debug binaries: `currentOtaPatchNumber` is
+  /// then always null and OTA checks are no-ops.
+  static bool get isOtaAvailable => _ota.isOtaAvailable;
+
   /// Test-only reset between cases.
   static void debugResetOta() {
     _ota.resetForTests();
