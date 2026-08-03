@@ -80,13 +80,29 @@ class OtaController {
   Future<void> downloadUpdateIfAvailable() async {
     if (isSafeToPromptRestart == null || _inFlight) return;
     final updater = _resolvedUpdater;
-    if (!updater.isAvailable) return;
+    if (!updater.isAvailable) {
+      developer.log(
+        'OTA download skipped: updater unavailable',
+        name: 'hovr_app_update',
+      );
+      return;
+    }
 
     _inFlight = true;
     try {
+      final bootedPatch = await updater.readCurrentPatchNumber();
       final status = await updater.checkForUpdate(track: track);
+      developer.log(
+        'OTA download check bootedPatch=$bootedPatch status=$status '
+        'track=${track ?? 'stable'}',
+        name: 'hovr_app_update',
+      );
       if (status != OtaUpdateStatus.outdated) return;
       await updater.downloadUpdate(track: track);
+      developer.log(
+        'OTA patch downloaded; applies on next cold start',
+        name: 'hovr_app_update',
+      );
     } catch (error, stackTrace) {
       _reportError(error, stackTrace);
     } finally {

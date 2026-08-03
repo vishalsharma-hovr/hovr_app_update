@@ -1,6 +1,6 @@
 name: hovr_app_update
 description: Native update dialog (store + Shorebird OTA) with once-per-session policy for HOVR Flutter apps.
-version: 0.2.2
+version: 0.2.3
 homepage: https://github.com/vishalsharma-hovr/hovr_app_update
 repository: https://github.com/vishalsharma-hovr/hovr_app_update
 publish_to: none

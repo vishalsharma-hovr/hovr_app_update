@@ -1,3 +1,7 @@
+## 0.2.3
+
+- `downloadUpdateIfAvailable` logs status and cold-start apply note (silent OTA).
+
 ## 0.2.2
 
 - Add `HovrAppUpdate.isOtaAvailable` so hosts can tell a Shorebird release build
