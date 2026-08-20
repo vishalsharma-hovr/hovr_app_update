@@ -54,9 +54,11 @@ class OtaController {
   /// False for `flutter build` / debug binaries — OTA can never apply there.
   bool get isOtaAvailable => _resolvedUpdater.isAvailable;
 
-  Future<void> checkForUpdateAndPromptIfReady() async {
+  /// Checks Shorebird for a patch, downloads when outdated, and prompts restart
+  /// when safe. Returns the final [OtaUpdateStatus] so hosts can surface it in UI.
+  Future<OtaUpdateStatus> checkForUpdateAndPromptIfReady() async {
     final isSafe = isSafeToPromptRestart;
-    if (isSafe == null || _inFlight) return;
+    if (isSafe == null || _inFlight) return OtaUpdateStatus.unavailable;
     final updater = _resolvedUpdater;
     if (!updater.isAvailable) {
       developer.log(
@@ -64,14 +66,15 @@ class OtaController {
         '`shorebird release`, so patches can never apply',
         name: 'hovr_app_update',
       );
-      return;
+      return OtaUpdateStatus.unavailable;
     }
 
     _inFlight = true;
     try {
-      await _checkAndPrompt(isSafe, updater);
+      return await _checkAndPrompt(isSafe, updater);
     } catch (error, stackTrace) {
       _reportError(error, stackTrace);
+      return OtaUpdateStatus.unavailable;
     } finally {
       _inFlight = false;
     }
@@ -119,7 +122,7 @@ class OtaController {
     _inFlight = false;
   }
 
-  Future<void> _checkAndPrompt(
+  Future<OtaUpdateStatus> _checkAndPrompt(
     bool Function() isSafe,
     OtaUpdater updater,
   ) async {
@@ -140,13 +143,13 @@ class OtaController {
       );
     }
 
-    if (status != OtaUpdateStatus.restartRequired) return;
+    if (status != OtaUpdateStatus.restartRequired) return status;
     if (!isSafe()) {
       developer.log(
         'OTA restart deferred (host reported not safe)',
         name: 'hovr_app_update',
       );
-      return;
+      return status;
     }
 
     final hostPrompt = promptRestart;
@@ -156,10 +159,11 @@ class OtaController {
         'OTA restart prompt accepted=$accepted',
         name: 'hovr_app_update',
       );
-      return;
+      return status;
     }
 
     await _platform.promptRestartToApplyUpdate();
+    return status;
   }
 
   void _reportError(Object error, StackTrace stackTrace) {

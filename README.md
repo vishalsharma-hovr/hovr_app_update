@@ -22,6 +22,7 @@ await HovrAppUpdate.promptIfUpdateRequired(serverVersion: remoteVersion);
 
 // Shorebird OTA (check/download; same dialog; Update restarts process)
 await HovrAppUpdate.checkForOtaAndPromptIfReady();
+// → OtaUpdateStatus.upToDate | restartRequired | unavailable
 ```
 
 Hosts must set `auto_update: false` in their own `shorebird.yaml`. OTA is a no-op on non-Shorebird / debug builds.

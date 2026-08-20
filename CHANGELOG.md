@@ -1,3 +1,8 @@
+## 0.2.4
+
+- `checkForOtaAndPromptIfReady` returns [OtaUpdateStatus] so hosts can show the
+  real Shorebird result (up to date / restart required / unavailable).
+
 ## 0.2.3
 
 - `downloadUpdateIfAvailable` logs status and cold-start apply note (silent OTA).

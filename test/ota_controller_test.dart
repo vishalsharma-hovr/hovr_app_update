@@ -44,7 +44,8 @@ void main() {
       updater: updater,
     );
 
-    await controller.checkForUpdateAndPromptIfReady();
+    final status = await controller.checkForUpdateAndPromptIfReady();
+    expect(status, OtaUpdateStatus.unavailable);
     expect(updater.checkCount, 0);
     expect(updater.downloadCount, 0);
     expect(calls, isEmpty);
@@ -64,11 +65,32 @@ void main() {
       updater: updater,
     );
 
-    await controller.checkForUpdateAndPromptIfReady();
+    final status = await controller.checkForUpdateAndPromptIfReady();
+    expect(status, OtaUpdateStatus.restartRequired);
     expect(updater.checkCount, 1);
     expect(updater.downloadCount, 1);
     expect(calls.single.method, 'promptRestartToApplyUpdate');
     expect(await controller.currentPatchNumber(), 1);
+  });
+
+  test('returns upToDate when Shorebird reports no newer patch', () async {
+    final platform = HovrAppUpdatePlatform();
+    final controller = OtaController(platform: platform);
+    final updater = _FakeUpdater(
+      available: true,
+      status: OtaUpdateStatus.upToDate,
+      currentPatch: 3,
+    );
+
+    controller.configure(
+      isSafeToPromptRestart: () => true,
+      updater: updater,
+    );
+
+    final status = await controller.checkForUpdateAndPromptIfReady();
+    expect(status, OtaUpdateStatus.upToDate);
+    expect(updater.downloadCount, 0);
+    expect(calls, isEmpty);
   });
 
   test('defers prompt when not safe to restart', () async {
@@ -84,7 +106,8 @@ void main() {
       updater: updater,
     );
 
-    await controller.checkForUpdateAndPromptIfReady();
+    final status = await controller.checkForUpdateAndPromptIfReady();
+    expect(status, OtaUpdateStatus.restartRequired);
     expect(updater.downloadCount, 1);
     expect(calls, isEmpty);
   });
@@ -123,7 +146,8 @@ void main() {
       updater: updater,
     );
 
-    await controller.checkForUpdateAndPromptIfReady();
+    final status = await controller.checkForUpdateAndPromptIfReady();
+    expect(status, OtaUpdateStatus.unavailable);
     expect(seenError, isA<StateError>());
   });
 }
