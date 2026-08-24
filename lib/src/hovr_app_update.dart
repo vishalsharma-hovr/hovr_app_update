@@ -89,6 +89,14 @@ class HovrAppUpdate {
   /// then always null and OTA checks are no-ops.
   static bool get isOtaAvailable => _ota.isOtaAvailable;
 
+  /// Cold-restarts so a downloaded OTA patch can boot.
+  ///
+  /// Android relaunches the app automatically. iOS terminates only — the user
+  /// must reopen from the home screen (OS restriction).
+  static Future<void> restartToApplyUpdate() {
+    return _platform.restartToApplyUpdate();
+  }
+
   /// Test-only reset between cases.
   static void debugResetOta() {
     _ota.resetForTests();

@@ -6,6 +6,7 @@ enum AppUpdateChannelConstants {
   static let methodConfigure = "configure"
   static let methodPrompt = "promptIfUpdateRequired"
   static let methodPromptRestart = "promptRestartToApplyUpdate"
+  static let methodRestart = "restartToApplyUpdate"
   static let methodGetInstalledVersion = "getInstalledVersion"
   static let methodGetAppInfo = "getAppInfo"
 }
@@ -37,6 +38,8 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
       handlePrompt(call: call, result: result)
     case AppUpdateChannelConstants.methodPromptRestart:
       handlePromptRestart(result: result)
+    case AppUpdateChannelConstants.methodRestart:
+      handleRestart(result: result)
     case AppUpdateChannelConstants.methodGetInstalledVersion:
       handleGetInstalledVersion(result: result)
     case AppUpdateChannelConstants.methodGetAppInfo:
@@ -125,6 +128,15 @@ public class HovrAppUpdatePlugin: NSObject, FlutterPlugin {
       }
       let dialogShown = self.presentUpdateDialogIfNeeded(mode: .restart, appStoreId: nil)
       result(self.promptResult(updateRequired: true, dialogShown: dialogShown))
+    }
+  }
+
+  /// iOS cannot programmatically relaunch after exit; terminates so the user
+  /// can reopen from the home screen and boot the downloaded patch.
+  private func handleRestart(result: @escaping FlutterResult) {
+    result(nil)
+    DispatchQueue.main.async {
+      exit(0)
     }
   }
 

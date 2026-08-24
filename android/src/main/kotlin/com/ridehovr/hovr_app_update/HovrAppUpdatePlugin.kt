@@ -51,6 +51,7 @@ class HovrAppUpdatePlugin :
             AppUpdateChannelConstants.METHOD_CONFIGURE -> handleConfigure(result)
             AppUpdateChannelConstants.METHOD_PROMPT -> handlePrompt(call, result)
             AppUpdateChannelConstants.METHOD_PROMPT_RESTART -> handlePromptRestart(result)
+            AppUpdateChannelConstants.METHOD_RESTART -> handleRestart(result)
             AppUpdateChannelConstants.METHOD_GET_INSTALLED_VERSION -> handleGetInstalledVersion(result)
             AppUpdateChannelConstants.METHOD_GET_APP_INFO -> handleGetAppInfo(result)
             else -> result.notImplemented()
@@ -136,6 +137,16 @@ class HovrAppUpdatePlugin :
             )
             result.success(promptResult(updateRequired = true, dialogShown = dialogShown))
         }
+    }
+
+    private fun handleRestart(result: Result) {
+        val context = activity ?: applicationContext
+        if (context == null) {
+            result.error("NO_CONTEXT", "Application context is not available", null)
+            return
+        }
+        result.success(null)
+        ProcessRestarter.restart(context)
     }
 
     private fun readServerVersion(call: MethodCall): String? {

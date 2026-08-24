@@ -91,6 +91,14 @@ class HovrAppUpdatePlatform {
     }
   }
 
+  /// Cold-restarts the process so a downloaded OTA patch can boot.
+  ///
+  /// Android relaunches the launcher activity then kills this process.
+  /// iOS terminates only — the OS does not allow auto-relaunch.
+  Future<void> restartToApplyUpdate() async {
+    await _channel.invokeMethod<void>('restartToApplyUpdate');
+  }
+
   AppUpdateResult _parseAndMarkStore(Object? response) {
     if (response is Map<Object?, Object?>) {
       final result = AppUpdateResult.fromMap(response);

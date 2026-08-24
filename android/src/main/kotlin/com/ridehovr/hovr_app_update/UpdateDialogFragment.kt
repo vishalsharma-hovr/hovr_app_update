@@ -4,7 +4,6 @@ import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Process
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.net.toUri
 import androidx.fragment.app.DialogFragment
-import kotlin.system.exitProcess
 
 private fun openPlayStore(context: Context) {
     val packageName = context.packageName
@@ -55,9 +53,8 @@ private fun openPlayStore(context: Context) {
     }
 }
 
-private fun restartProcess() {
-    Process.killProcess(Process.myPid())
-    exitProcess(0)
+private fun restartProcess(context: Context) {
+    ProcessRestarter.restart(context)
 }
 
 @Composable
@@ -124,7 +121,7 @@ internal class UpdateDialogFragment : DialogFragment() {
                             onUpdateClick = {
                                 dismiss()
                                 if (mode == AppUpdateChannelConstants.DIALOG_MODE_RESTART) {
-                                    restartProcess()
+                                    restartProcess(requireContext())
                                 } else {
                                     openPlayStore(requireContext())
                                 }

@@ -6,6 +6,7 @@ internal object AppUpdateChannelConstants {
     const val METHOD_CONFIGURE = "configure"
     const val METHOD_PROMPT = "promptIfUpdateRequired"
     const val METHOD_PROMPT_RESTART = "promptRestartToApplyUpdate"
+    const val METHOD_RESTART = "restartToApplyUpdate"
     const val METHOD_GET_INSTALLED_VERSION = "getInstalledVersion"
     const val METHOD_GET_APP_INFO = "getAppInfo"
 
