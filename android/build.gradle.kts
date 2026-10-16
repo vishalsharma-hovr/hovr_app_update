@@ -3,7 +3,6 @@ version = "1.0-SNAPSHOT"
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -17,9 +16,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_21.toString()
-    }
 
     buildFeatures {
         compose = true
@@ -54,4 +50,10 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+}
+
+// Built-in Kotlin (AGP 9): no Kotlin Gradle Plugin here. Apps still on
+// android.builtInKotlin=false get kotlin-android applied by the Flutter Gradle plugin.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
 }
